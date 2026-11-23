@@ -196,7 +196,7 @@ Stop the server (Ctrl+C) when you finish. `--lan` lets everyone on that network 
 6. Play one game and send the score. In the *Actions* tab, "Add score to leaderboard" should run and the issue should close.
 7. Before launch, clear test scores: `python scripts/admin.py reset`, commit and push.
 
-How scores flow: browser → pre-filled issue titled `SCORE|nick|score` → `score.yml` scans and validates all open score issues → accepted scores are committed together to `leaderboard.json` → accepted issues are closed → Pages republishes. Each issue number is recorded to prevent duplicate scoring if a workflow retries. Rejected scores receive a comment and `score-rejected` label. The workflow also scans for unprocessed scores every five minutes, recovering score issues if GitHub replaces a pending workflow run. If a score does not show, check the *Actions* tab and its run-log artifact.
+How scores flow: browser → pre-filled issue titled `SCORE|nick|score` → `score.yml` scans and validates all open score issues → accepted scores are committed together to `leaderboard.json` → accepted issues are closed → Pages republishes. To run it manually, open *Actions → Add score to leaderboard → Run workflow → Run workflow*. This processes all currently open, unprocessed `SCORE|...` issues. Each issue number is recorded to prevent duplicate scoring if a workflow retries. Rejected scores receive a comment and `score-rejected` label. The workflow also scans for unprocessed scores every five minutes, recovering score issues if GitHub replaces a pending workflow run. If a score does not show, check the *Actions* tab and its run-log artifact.
 
 ## B8. Update words with GitHub Actions
 *Actions → Update words → Run workflow*, then fill in:

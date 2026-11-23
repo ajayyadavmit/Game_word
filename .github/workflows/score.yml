@@ -2,6 +2,7 @@ name: Add score to leaderboard
 on:
   issues:
     types: [opened]
+  workflow_dispatch:
   schedule:
     - cron: "*/5 * * * *"
 permissions:
@@ -12,7 +13,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   add:
-    if: github.event_name == 'schedule' || startsWith(github.event.issue.title, 'SCORE|')
+    if: github.event_name != 'issues' || startsWith(github.event.issue.title, 'SCORE|')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
