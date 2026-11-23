@@ -368,5 +368,17 @@
     "TELECOM",
     "HUMAN",
     "INTERACTION"
+  ],
+  "fruits": [
+    "YIELD",
+    "VEGETABLE",
+    "BLOSSOM",
+    "OUTGROWTH",
+    "ORCHARD",
+    "APPLE",
+    "BERRY",
+    "PEAR",
+    "PINEAPPLE",
+    "GRAPEFRUIT"
   ]
 }
