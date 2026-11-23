@@ -7,6 +7,7 @@ function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.
 async function getJSON(url) { const r = await fetch(url, { cache: "no-store" }); if (!r.ok) throw new Error(url + " not found"); return r.json(); }
 
 let CFG, mode = "github", bank = {}, allWords = new Set(), nick = "", level = "", boardLevel = "", boardData = [], boardFailed = false, game = null;
+const meaningCache = new Map();
 try { nick = localStorage.getItem("wg_nick") || ""; } catch (e) {}
 
 // ---------- guest nickname (suggested by the program, no free typing) ----------
@@ -37,9 +38,12 @@ function loadWords(json) {
     const seen = new Set(), items = [];
     for (const raw of list || []) {
       const obj = raw && typeof raw === "object";
-      const w = String(obj ? raw.word : raw).trim().toUpperCase(), hint = obj && raw.hint ? String(raw.hint) : "";
+      const w = String(obj ? raw.word : raw).trim().toUpperCase();
+      const hint = obj && raw.hint ? String(raw.hint) : "";
+      const meaning = obj && raw.meaning ? String(raw.meaning) : "";
+      const meaningSource = obj && raw.meaningSource ? String(raw.meaningSource) : "";
       if (!ok.test(w)) console.warn(`Skipped "${w}" in "${d}": use letters A-Z only, ${min}-${max} letters long.`);
-      else if (!seen.has(w)) { seen.add(w); items.push({ w, hint }); allWords.add(w); }
+      else if (!seen.has(w)) { seen.add(w); items.push({ w, hint, meaning, meaningSource }); allWords.add(w); }
     }
     if (items.length) bank[d.toLowerCase()] = items;
   }
@@ -138,6 +142,9 @@ function drawTiles(word, shown, state) {
 }
 
 function ask() {
+  if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+  $("vocabulary").hidden = true;
+  $("pronunciation-info").textContent = "";
   const item = game.items[game.i];
   const q = game.q = makeQuestion(item.w, CFG.difficulties[game.level].blanks); game.locked = false;
   $("round").textContent = `Word ${game.i + 1} of ${game.items.length}`;
@@ -169,8 +176,58 @@ function answer(o, timedOut = false) {
   $("score").textContent = game.score;
   $("msg").textContent = timedOut ? `Time's up! The word was ${q.word}. ${CFG.pointsWrong} points.` :
     ok ? `Correct! +${CFG.pointsRight}` : `Not quite. ${CFG.pointsWrong}. The word is ${q.word}.`;
+  const item = game.items[game.i];
+  $("vocab-word").textContent = q.word;
+  $("vocab-meaning").textContent = item.meaning || "Looking up a dictionary definition...";
+  showMeaningSource(item.meaning ? item.meaningSource || "Saved word list" : "Free Dictionary API (dictionaryapi.dev)", !item.meaning);
+  $("vocabulary").hidden = false;
+  if (!item.meaning) showDictionaryMeaning(item, game, game.i);
   $("next").textContent = game.i === game.items.length - 1 ? "See my score" : "Next word";
   $("next").hidden = false; $("next").focus();
+}
+
+function showMeaningSource(source, linkToDictionary = false) {
+  const box = $("meaning-source");
+  box.replaceChildren(document.createTextNode("Source: "));
+  if (linkToDictionary) {
+    const link = el("a", "", source);
+    link.href = "https://dictionaryapi.dev/";
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    box.appendChild(link);
+  } else {
+    box.appendChild(document.createTextNode(source));
+  }
+}
+
+async function lookupMeaning(word) {
+  if (!meaningCache.has(word)) {
+    meaningCache.set(word, (async () => {
+      const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word.toLowerCase())}`);
+      if (!response.ok) throw new Error(`Dictionary lookup failed (${response.status}).`);
+      const entries = await response.json();
+      const definition = entries.flatMap(entry => entry.meanings || [])
+        .flatMap(meaning => meaning.definitions || [])
+        .map(item => item.definition)
+        .find(text => typeof text === "string" && text.trim());
+      if (!definition) throw new Error("No dictionary definition was found.");
+      return definition.trim();
+    })());
+  }
+  return meaningCache.get(word);
+}
+
+async function showDictionaryMeaning(item, currentGame, questionIndex) {
+  try {
+    const meaning = await lookupMeaning(item.w);
+    if (game === currentGame && game.i === questionIndex && game.locked) $("vocab-meaning").textContent = meaning;
+  } catch (error) {
+    if (game !== currentGame || game.i !== questionIndex || !game.locked) return;
+    $("vocab-meaning").textContent = item.hint
+      ? `No dictionary definition is available. Clue: ${item.hint}`
+      : "No dictionary definition is available for this word.";
+    showMeaningSource("Dictionary lookup unavailable");
+  }
 }
 
 function issueUrl(p) {
@@ -222,6 +279,17 @@ function renderBoard() {
 // ---------- start-up ----------
 async function init() {
   $("play").onclick = start;
+  $("pronounce").onclick = () => {
+    if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) return;
+    const utterance = new SpeechSynthesisUtterance($("vocab-word").textContent);
+    utterance.lang = "en-US";
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+  };
+  if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) {
+    $("pronounce").disabled = true;
+    $("pronunciation-info").textContent = "Audio pronunciation is not supported in this browser.";
+  }
   $("domain").onchange = updatePlay;
   $("again").onclick = () => { show("home"); renderNicks(); refreshTopics(); };
   $("reroll").onclick = renderNicks;

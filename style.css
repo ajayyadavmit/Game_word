@@ -15,7 +15,11 @@ button:disabled{cursor:default}
 .ghost{border-color:var(--soft);color:var(--mid)}
 .chips{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:.5rem}
 .chip.on{background:var(--sun);border-color:var(--ink);font-weight:600}
-.bar{display:flex;justify-content:space-between}
+.bar{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:.5rem}
+#round{grid-column:1;min-width:0}
+#next{grid-column:2}
+#score-label{grid-column:3;text-align:right;white-space:nowrap}
+.next-action{margin:0;padding:.4rem .8rem;font-size:.95rem;white-space:nowrap}
 .timer-wrap{max-width:22rem;margin:1rem auto;text-align:center}
 .timer-label{display:flex;align-items:baseline;justify-content:center;gap:.45rem;font-weight:600}
 .timer{font-size:2rem;font-weight:700;font-variant-numeric:tabular-nums}
@@ -36,6 +40,15 @@ button:disabled{cursor:default}
 .opt.good{background:var(--good);border-color:var(--good);color:#fff;opacity:1}
 .opt.bad{background:var(--bad);border-color:var(--bad);color:#fff;opacity:1}
 .msg{min-height:1.6em;font-weight:600}
+.vocabulary{margin:1rem 0;padding:.8rem 1rem;border-radius:.7rem;background:var(--paper)}
+.vocab-heading{display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.vocabulary h2{margin:.1rem 0 .2rem}
+.vocabulary p{margin:.35rem 0}
+.vocab-word{font-size:1.5rem;font-weight:700;letter-spacing:.04em}
+.speak{display:inline-flex;align-items:center;justify-content:center;gap:.45rem;min-width:6.5rem;border:0;border-radius:999px;background:var(--ink);color:#fff;font-size:.95rem;font-weight:600}
+.speak:hover{background:var(--mid)}
+.speak:active{transform:scale(.97)}
+@media(prefers-reduced-motion:reduce){.speak:active{transform:none}}
 .big{font-size:3.5rem;font-weight:700;margin:0}
 .error{background:#ffe3e3;border-radius:.7rem;padding:.8rem}
 ol{padding:0;margin:0;list-style:none;counter-reset:r}

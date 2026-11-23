@@ -17,7 +17,7 @@ and **B. Technical setup** (how an engineer installs, configures, tests and depl
 4. **Choose a topic** (science, history, ...) or *All topics*.
 5. Press **Play**. Each game has 10 words (setting: `rounds`).
 6. For each word, look at the blanks and pick the missing letters from the 4 options (click, or press keys 1-4).
-7. The game shows right or wrong at once, reveals the word, and updates the score. Press **Next word**.
+7. The game shows right or wrong at once, reveals the word, and updates the score. Review its meaning and press **Listen** to hear the pronunciation, then press **Next word**.
 8. After the last word, the final score is shown and sent to the leaderboard (see A4).
 
 ## A2. Difficulty levels (decided by the number of blanks)
@@ -52,7 +52,7 @@ and **B. Technical setup** (how an engineer installs, configures, tests and depl
 |---|---|
 | Add or change words | Edit `words.json` (see B4) |
 | Add a topic | Add a new key in `words.json`, e.g. `"geography": ["RIVER", ...]` |
-| Add a hint to a word | `{ "word": "APPLE", "hint": "A round fruit" }` |
+| Add a hint and meaning to a word | `{ "word": "APPLE", "hint": "A round fruit, often red or green", "meaning": "A round fruit produced by a tree." }` |
 | Add words automatically | GitHub Actions → *Update words* (see B8) |
 | Change points, number of words, level names | Edit `config.json` (see B3) |
 | Remove an inappropriate or fake entry | `python scripts/admin.py remove NICKNAME` |
@@ -126,13 +126,15 @@ JSON has no comments, so every setting is explained here. Bad values stop the Py
 ```json
 {
   "general": [
-    { "word": "APPLE", "hint": "A round fruit, often red or green" },
+    { "word": "APPLE", "hint": "A round fruit, often red or green", "meaning": "A round fruit produced by a tree." },
     "ORANGE", "BANANA"
   ],
   "science": ["PLANET", "GRAVITY"]
 }
 ```
-- Each key is a topic. Each item is a plain word or `{ "word", "hint" }` (hint optional).
+- Each key is a topic. Each item can be a plain word or an object with `word`, `hint`, and `meaning`. A **hint** is a short clue shown before answering; a **meaning** is a definition shown after answering.
+- If an entry has no saved meaning, the game looks up the first available definition from the [Free Dictionary API](https://dictionaryapi.dev/) after the answer. The source name links to the API website. It deliberately shows one definition rather than combining multiple senses and labels it unreviewed. The API can still return a sense that does not fit the selected topic, so review definitions and save corrected meanings in `words.json`; the source is shown in the vocabulary panel.
+- Pronunciation uses the browser's built-in English speech synthesis; no audio service is required.
 - The game checks only the format: letters A-Z (case ignored), no spaces or hyphens, and length within `wordLength`. It does **not** check whether a string is a real English word or is correct for its topic.
 - Format-invalid words are skipped and listed in the browser console (F12); duplicates are ignored. Review the word list yourself, especially words added automatically.
 - Reload the page after editing. 
@@ -206,9 +208,10 @@ How scores flow: browser → pre-filled issue titled `SCORE|nick|score` → `sco
 - **query**: what to find words about, e.g. `chemistry` or `grade 6 water cycle`
 - **count**: how many to add (max 100)
 
-Words are converted to capitals, checked for letters only, de-duplicated, length-filtered by `wordLength`, and committed to `words.json`.
-- **No key set:** the free Datamuse API is used. It tries a topic search first, then a meaning-related search if the topic search returns nothing. Results are suggestions, not guaranteed topic-specific words, so review them. If neither search yields new usable words, the workflow fails without adding an empty topic.
-- **With `ANTHROPIC_API_KEY`** (repo *Settings → Secrets and variables → Actions*): Claude writes school-appropriate words. Change the model with the `MODEL` line in `update-words.yml` (default `claude-sonnet-5-5`).
+- Words are converted to capitals, checked for letters only, de-duplicated, length-filtered by `wordLength`, given a hint and meaning, and committed to `words.json`.
+- **No key set:** Datamuse suggests topic words, then the Free Dictionary API supplies its first available definition for both the hint and meaning. The saved source is `Free Dictionary API (dictionaryapi.dev)`. The dictionary definition is not guaranteed to match the topic-specific sense.
+- **With `ANTHROPIC_API_KEY`** (repo *Settings → Secrets and variables → Actions*): Claude provides a short clue and topic-aware meaning for each school-appropriate word; the workflow preserves Claude's meaning rather than replacing it with a dictionary definition. Those entries are labeled `AI-generated (Claude)`. Change the model with the `MODEL` line in `update-words.yml` (default `claude-sonnet-5-5`).
+- Datamuse suggestions are not guaranteed to match the topic, so review new words and their clues/definitions. If no suitable words with metadata are found, the workflow fails without changing `words.json`.
 - Always skim new words before students use them.
 
 ## B8a. Run logs
