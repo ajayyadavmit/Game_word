@@ -1,6 +1,14 @@
 {
  "entries": [
   {
+   "nick": "CosmicYak44",
+   "difficulty": "simple",
+   "best": 10,
+   "plays": 1,
+   "domain": "general",
+   "updated": "2026-11-23"
+  },
+  {
    "nick": "SteadyTiger91",
    "difficulty": "simple",
    "best": 3,
@@ -16,5 +24,8 @@
    "domain": "all",
    "updated": "2026-11-23"
   }
+ ],
+ "processedIssues": [
+  "2"
  ]
 }
