@@ -27,10 +27,18 @@ def from_claude(key):
     return json.loads(text[text.index("["):text.rindex("]") + 1])
 
 
-def from_datamuse():
-    url = "https://api.datamuse.com/words?" + urllib.parse.urlencode({"topics": query, "max": count * 5})
+def datamuse_request(parameter):
+    url = "https://api.datamuse.com/words?" + urllib.parse.urlencode({parameter: query, "max": count * 5})
     with urllib.request.urlopen(url, timeout=30) as r:
         return [w["word"] for w in json.load(r)]
+
+
+def from_datamuse():
+    found = datamuse_request("topics")
+    if found:
+        return found
+    print("Datamuse topics search returned no matches; retrying with meaning-related search.")
+    return datamuse_request("ml")
 
 
 key = os.environ.get("ANTHROPIC_API_KEY")
@@ -39,13 +47,18 @@ found = from_claude(key) if key else from_datamuse()
 
 with open(PATH, encoding="utf-8") as f:
     data = json.load(f)
-have = {(x["word"] if isinstance(x, dict) else x).upper() for x in data.setdefault(domain, [])}
+existing = data.get(domain, [])
+if not isinstance(existing, list):
+    sys.exit(f"words.json topic '{domain}' must contain a list")
+have = {(x["word"] if isinstance(x, dict) else x).upper() for x in existing}
 added = []
 for w in found:
     w = str(w).strip().upper()
     if re.fullmatch(rf"[A-Z]{{{LO},{HI}}}", w) and w not in have and len(added) < count:
         have.add(w); added.append(w)
-data[domain] += added
+if not added:
+    sys.exit(f"No new usable words found for '{domain}'. words.json was not changed.")
+data[domain] = existing + added
 with open(PATH, "w", encoding="utf-8") as f:
     json.dump(data, f, indent=2)
 print(f"Added {len(added)} words to '{domain}':", ", ".join(added))

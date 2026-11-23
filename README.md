@@ -205,7 +205,7 @@ How scores flow: browser → pre-filled issue titled `SCORE|nick|score` → `sco
 - **count**: how many to add (max 100)
 
 Words are converted to capitals, checked for letters only, de-duplicated, length-filtered by `wordLength`, and committed to `words.json`.
-- **No key set:** the free Datamuse API is used (quick, but results are loose matches, so review them). The run log prints which provider was selected.
+- **No key set:** the free Datamuse API is used. It tries a topic search first, then a meaning-related search if the topic search returns nothing. Results are suggestions, not guaranteed topic-specific words, so review them. If neither search yields new usable words, the workflow fails without adding an empty topic.
 - **With `ANTHROPIC_API_KEY`** (repo *Settings → Secrets and variables → Actions*): Claude writes school-appropriate words. Change the model with the `MODEL` line in `update-words.yml` (default `claude-sonnet-5-5`).
 - Always skim new words before students use them.
 
