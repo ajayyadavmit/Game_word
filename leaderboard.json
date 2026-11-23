@@ -31,10 +31,19 @@
    "plays": 1,
    "domain": "all",
    "updated": "2026-11-23"
+  },
+  {
+   "nick": "NimbleEagle56",
+   "difficulty": "simple",
+   "best": -5,
+   "plays": 1,
+   "domain": "fruits",
+   "updated": "2026-11-23"
   }
  ],
  "processedIssues": [
   "2",
-  "3"
+  "3",
+  "4"
  ]
 }
