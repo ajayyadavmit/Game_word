@@ -44,7 +44,7 @@ and **B. Technical setup** (how an engineer installs, configures, tests and depl
 - Tabs switch between Simple, Medium and Hard boards.
 - Your own nickname is highlighted.
 - **Local test mode:** the score is saved automatically when the game ends.
-- **GitHub (online) mode:** the player presses *Send score to leaderboard*, which opens a pre-filled GitHub issue. They press *Submit new issue*, a bot checks the score and adds it, and the board updates about a minute later. Players need a free GitHub account.
+- **GitHub (online) mode:** the player presses *Send score to leaderboard*, which opens a pre-filled GitHub issue. They press *Submit new issue*, a bot checks the score and adds it, and the board updates about a minute later. Accepted issues are closed; rejected scores get a comment explaining why and stay open. Players need a free GitHub account.
 - Nicknames are guest names only. No personal data is collected or stored: nickname, best score, number of plays, last topic, date.
 
 ## A5. What a teacher or content owner can do
@@ -196,7 +196,7 @@ Stop the server (Ctrl+C) when you finish. `--lan` lets everyone on that network 
 6. Play one game and send the score. In the *Actions* tab, "Add score to leaderboard" should run and the issue should close.
 7. Before launch, clear test scores: `python scripts/admin.py reset`, commit and push.
 
-How scores flow: browser → pre-filled issue titled `SCORE|nick|score` → `score.yml` → `process_score.py` validates → `leaderboard.json` committed → issue closed with a comment → Pages republishes. Jobs share one concurrency group, so simultaneous scores are queued, not lost. If a new score does not show, check the *Actions* tab for a failed run.
+How scores flow: browser → pre-filled issue titled `SCORE|nick|score` → `score.yml` → `process_score.py` validates → `leaderboard.json` committed → accepted issue closed with a comment → Pages republishes. Rejected scores receive a comment and stay open. Jobs share one concurrency group, so simultaneous scores are queued, not lost. If a new score does not show, check the *Actions* tab and its run-log artifact for the failure or rejection reason.
 
 ## B8. Update words with GitHub Actions
 *Actions → Update words → Run workflow*, then fill in:

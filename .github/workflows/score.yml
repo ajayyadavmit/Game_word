@@ -16,9 +16,11 @@ jobs:
       - uses: actions/checkout@v4
       - id: p
         run: python scripts/process_score.py 2>&1 | tee run.log
+        shell: bash
         env:
           ISSUE_BODY: ${{ github.event.issue.body }}
       - name: Save leaderboard
+        if: steps.p.outputs.accepted == 'true'
         run: |
           {
             git config user.name "leaderboard-bot"
@@ -26,12 +28,23 @@ jobs:
             git add leaderboard.json
             git diff --cached --quiet || (git commit -m "Update leaderboard" && git pull --rebase && git push)
           } 2>&1 | tee -a run.log
+        shell: bash
       - name: Close issue
+        if: steps.p.outputs.accepted == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           MSG: ${{ steps.p.outputs.msg }}
           NUM: ${{ github.event.issue.number }}
         run: gh issue close "$NUM" --comment "$MSG" 2>&1 | tee -a run.log
+        shell: bash
+      - name: Comment with rejection reason
+        if: steps.p.outputs.accepted == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MSG: ${{ steps.p.outputs.msg }}
+          NUM: ${{ github.event.issue.number }}
+        run: gh issue comment "$NUM" --body "$MSG" 2>&1 | tee -a run.log
+        shell: bash
       - name: Upload run log
         if: always()
         uses: actions/upload-artifact@v4

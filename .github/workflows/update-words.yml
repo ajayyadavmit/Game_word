@@ -24,6 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: python scripts/update_words.py 2>&1 | tee run.log
+        shell: bash
         env:
           DOMAIN: ${{ inputs.domain }}
           QUERY: ${{ inputs.query }}
@@ -38,6 +39,7 @@ jobs:
             git add words.json
             git diff --cached --quiet || (git commit -m "Update words" && git pull --rebase && git push)
           } 2>&1 | tee -a run.log
+        shell: bash
       - name: Upload run log
         if: always()
         uses: actions/upload-artifact@v4
