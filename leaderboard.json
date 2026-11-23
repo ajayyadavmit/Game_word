@@ -1,0 +1,20 @@
+{
+ "entries": [
+  {
+   "nick": "SteadyTiger91",
+   "difficulty": "simple",
+   "best": 3,
+   "plays": 2,
+   "domain": "1domains",
+   "updated": "2026-11-23"
+  },
+  {
+   "nick": "SteadyBear30",
+   "difficulty": "simple",
+   "best": 0,
+   "plays": 1,
+   "domain": "all",
+   "updated": "2026-11-23"
+  }
+ ]
+}
