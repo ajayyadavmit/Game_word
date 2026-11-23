@@ -9,6 +9,14 @@
    "updated": "2026-11-23"
   },
   {
+   "nick": "BoldOtter34",
+   "difficulty": "simple",
+   "best": 10,
+   "plays": 1,
+   "domain": "fruits",
+   "updated": "2026-11-23"
+  },
+  {
    "nick": "SteadyTiger91",
    "difficulty": "simple",
    "best": 3,
@@ -26,6 +34,7 @@
   }
  ],
  "processedIssues": [
-  "2"
+  "2",
+  "3"
  ]
 }
