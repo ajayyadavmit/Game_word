@@ -98,10 +98,33 @@ function renderLevels() {
 // ---------- game flow ----------
 function show(id) { for (const s of ["home", "game", "end"]) $(s).hidden = s !== id; }
 
+function stopQuestionTimer() {
+  if (game && game.timerId !== null) { clearInterval(game.timerId); game.timerId = null; }
+}
+
+function updateQuestionTimer() {
+  const remaining = Math.max(0, Math.ceil((game.deadline - Date.now()) / 1000));
+  $("timer").textContent = remaining;
+  $("timer-unit").textContent = remaining === 1 ? "second left" : "seconds left";
+  $("timer-bar").style.width = `${remaining / CFG.questionTimeSeconds * 100}%`;
+  $("timer-wrap").classList.toggle("urgent", remaining <= CFG.timerBlinkLastSeconds);
+  if (remaining === 0) answer(null, true);
+}
+
+function startQuestionTimer() {
+  const timer = $("timer-wrap");
+  timer.classList.remove("urgent");
+  if (CFG.questionTimeSeconds === 0) { timer.hidden = true; return; }
+  timer.hidden = false;
+  game.deadline = Date.now() + CFG.questionTimeSeconds * 1000;
+  updateQuestionTimer();
+  game.timerId = setInterval(updateQuestionTimer, 200);
+}
+
 function start() {
   const d = $("domain").value;
   const items = shuffle(pool(d, level)).slice(0, CFG.rounds);
-  game = { domain: d, level, items, i: 0, score: 0, right: 0, locked: false, q: null };
+  game = { domain: d, level, items, i: 0, score: 0, right: 0, locked: false, q: null, timerId: null };
   show("game"); ask();
 }
 
@@ -127,10 +150,15 @@ function ask() {
     b.onclick = () => answer(o); box.appendChild(b);
   });
   $("msg").textContent = ""; $("next").hidden = true;
+  startQuestionTimer();
 }
 
-function answer(o) {
-  if (game.locked) return; game.locked = true;
+function answer(o, timedOut = false) {
+  if (game.locked) return;
+  if (!timedOut && CFG.questionTimeSeconds && Date.now() >= game.deadline) timedOut = true;
+  game.locked = true;
+  stopQuestionTimer();
+  $("timer-wrap").classList.remove("urgent");
   const q = game.q, ok = o === q.correct;
   game.score += ok ? CFG.pointsRight : CFG.pointsWrong; if (ok) game.right++;
   for (const b of $("opts").children) {
@@ -139,7 +167,8 @@ function answer(o) {
   }
   drawTiles(q.word, q.shown, ok ? "good" : "bad");
   $("score").textContent = game.score;
-  $("msg").textContent = ok ? `Correct! +${CFG.pointsRight}` : `Not quite. ${CFG.pointsWrong}. The word is ${q.word}.`;
+  $("msg").textContent = timedOut ? `Time's up! The word was ${q.word}. ${CFG.pointsWrong} points.` :
+    ok ? `Correct! +${CFG.pointsRight}` : `Not quite. ${CFG.pointsWrong}. The word is ${q.word}.`;
   $("next").textContent = game.i === game.items.length - 1 ? "See my score" : "Next word";
   $("next").hidden = false; $("next").focus();
 }
@@ -213,7 +242,8 @@ async function init() {
   }
   document.title = CFG.title; $("title").textContent = CFG.title;
   const d = CFG.difficulties;
-  $("rules").textContent = `Pick the missing letters to finish each word. Right answer +${CFG.pointsRight}, wrong answer ${CFG.pointsWrong}. ${CFG.rounds} words per game.`;
+  const timerRule = CFG.questionTimeSeconds ? `${CFG.questionTimeSeconds} seconds per word.` : "No time limit.";
+  $("rules").textContent = `Pick the missing letters to finish each word. ${timerRule} Right answer +${CFG.pointsRight}, wrong answer ${CFG.pointsWrong}. ${CFG.rounds} words per game.`;
   level = boardLevel = d[CFG.defaultDifficulty] ? CFG.defaultDifficulty : Object.keys(d)[0];
   $("modeinfo").textContent = mode === "local" ? "Local test mode: scores save on this computer." : "Online mode: scores go through GitHub.";
   renderLevels(); renderNicks(); refreshTopics(); loadBoard();

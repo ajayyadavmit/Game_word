@@ -104,6 +104,8 @@ JSON has no comments, so every setting is explained here. Bad values stop the Py
 |---|---|---|
 | `title` | `"Word Fix"` | Game name shown on the page |
 | `rounds` | `10` | Words per game, 1-100. Also the maximum the server accepts |
+| `questionTimeSeconds` | `30` | Seconds allowed per question, 0-300. Set to `0` for no timer. The last 5 seconds blink; running out of time counts as a wrong answer |
+| `timerBlinkLastSeconds` | `5` | How many seconds at the end of each question make the timer blink. Set to `0` to disable blinking |
 | `pointsRight` | `3` | Points for a right answer. Whole number, must be greater than `pointsWrong` |
 | `pointsWrong` | `-4` | Points for a wrong answer (use `0` for no penalty) |
 | `optionsPerQuestion` | `4` | Choices shown, 2-6. A 1-blank vowel has only 4 other vowels, so 5 or 6 can occasionally show fewer |

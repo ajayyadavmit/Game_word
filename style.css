@@ -16,6 +16,16 @@ button:disabled{cursor:default}
 .chips{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:.5rem}
 .chip.on{background:var(--sun);border-color:var(--ink);font-weight:600}
 .bar{display:flex;justify-content:space-between}
+.timer-wrap{max-width:22rem;margin:1rem auto;text-align:center}
+.timer-label{display:flex;align-items:baseline;justify-content:center;gap:.45rem;font-weight:600}
+.timer{font-size:2rem;font-weight:700;font-variant-numeric:tabular-nums}
+.timer-track{height:.8rem;margin-top:.35rem;overflow:hidden;border-radius:999px;background:var(--soft)}
+.timer-bar{height:100%;width:100%;border-radius:inherit;background:var(--good);transition:width .2s linear,background-color .2s linear}
+.timer-wrap.urgent .timer{color:var(--bad)}
+.timer-wrap.urgent .timer-bar{background:var(--bad)}
+.timer-wrap.urgent{animation:timer-blink .5s steps(2,start) infinite}
+@keyframes timer-blink{to{opacity:.45}}
+@media(prefers-reduced-motion:reduce){.timer-wrap.urgent{animation:none}.timer-bar{transition:none}}
 .tiles{display:flex;gap:.4rem;flex-wrap:wrap;margin:1.2rem 0}
 .tile{width:3rem;height:3.6rem;display:grid;place-items:center;background:var(--soft);border-radius:.6rem;border-bottom:.3rem solid var(--ink);font-size:2rem;font-weight:700}
 .tile.blank{background:var(--sun);border-bottom-color:#a87600}
