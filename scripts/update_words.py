@@ -1,11 +1,22 @@
 """Run by GitHub Actions: add words with hints and meanings to words.json.
 Uses Claude if ANTHROPIC_API_KEY is set, otherwise Datamuse and Dictionary API."""
-import json, os, re, sys, urllib.parse, urllib.request
+import json, os, re, sys, time, urllib.parse, urllib.request
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from common import CFG
 
 PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "words.json")
 LO, HI = CFG["wordLength"]["min"], CFG["wordLength"]["max"]
+DICTIONARY_MIN_INTERVAL = 1.0
+DICTIONARY_RETRIES = 3
+_last_dictionary_request = 0.0
+
+
+class DictionaryRateLimitError(Exception):
+    pass
+
+
 domain = re.sub(r"\s+", "_", os.environ.get("DOMAIN", "").strip().lower())
 query = os.environ.get("QUERY", "").strip()
 count = max(1, min(int(os.environ.get("COUNT") or 20), 100))
@@ -43,16 +54,51 @@ def from_datamuse():
     return datamuse_request("ml")
 
 
+def retry_after_seconds(error, attempt):
+    value = error.headers.get("Retry-After") if error.headers else None
+    if value:
+        try:
+            delay = float(value)
+        except ValueError:
+            try:
+                retry_at = parsedate_to_datetime(value)
+                now = datetime.now(retry_at.tzinfo or timezone.utc)
+                delay = (retry_at - now).total_seconds()
+            except (TypeError, ValueError, OverflowError):
+                delay = 2 ** (attempt + 1)
+    else:
+        delay = 2 ** (attempt + 1)
+    return min(max(delay, 1), 60)
+
+
+def get_dictionary_entries(req):
+    global _last_dictionary_request
+    for attempt in range(DICTIONARY_RETRIES + 1):
+        wait = DICTIONARY_MIN_INTERVAL - (time.monotonic() - _last_dictionary_request)
+        if _last_dictionary_request and wait > 0:
+            time.sleep(wait)
+        _last_dictionary_request = time.monotonic()
+        try:
+            with urllib.request.urlopen(req, timeout=20) as r:
+                return json.load(r)
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                return None
+            if e.code != 429:
+                raise
+            if attempt == DICTIONARY_RETRIES:
+                raise DictionaryRateLimitError("Dictionary API kept returning HTTP 429.") from e
+            delay = retry_after_seconds(e, attempt)
+            print(f"Dictionary API rate-limited the request; retrying in {delay:g} seconds.")
+            time.sleep(delay)
+
+
 def dictionary_details(word):
     url = f"https://api.dictionaryapi.dev/api/v2/entries/en/{urllib.parse.quote(word.lower())}"
     req = urllib.request.Request(url, headers={"User-Agent": "Word-Fix educational word game"})
-    try:
-        with urllib.request.urlopen(req, timeout=20) as r:
-            entries = json.load(r)
-    except urllib.error.HTTPError as e:
-        if e.code == 404:
-            return None
-        raise
+    entries = get_dictionary_entries(req)
+    if entries is None:
+        return None
     for entry in entries:
         for part in entry.get("meanings", []):
             for definition in part.get("definitions", []):
@@ -73,12 +119,18 @@ if not isinstance(existing, list):
     sys.exit(f"words.json topic '{domain}' must contain a list")
 have = {(x["word"] if isinstance(x, dict) else x).upper() for x in existing}
 added = []
+dictionary_rate_limited = False
 for candidate in found:
     record = candidate if isinstance(candidate, dict) else {"word": candidate}
     w = str(record.get("word", "")).strip().upper()
     if not re.fullmatch(rf"[A-Z]{{{LO},{HI}}}", w) or w in have or len(added) >= count:
         continue
-    details = dictionary_details(w) if not record.get("hint") or not record.get("meaning") else None
+    try:
+        details = dictionary_details(w) if not record.get("hint") or not record.get("meaning") else None
+    except DictionaryRateLimitError:
+        print("Dictionary API remained rate-limited after retries; stopping further lookups.")
+        dictionary_rate_limited = True
+        break
     if details is None and (not record.get("hint") or not record.get("meaning")):
         print(f"Skipping {w}: no dictionary definition found.")
         continue
@@ -91,8 +143,12 @@ for candidate in found:
     source = "AI-generated (Claude)" if record.get("meaning") else "Free Dictionary API (dictionaryapi.dev)"
     added.append({"word": w, "hint": hint, "meaning": meaning, "meaningSource": source})
 if not added:
+    if dictionary_rate_limited:
+        sys.exit("No words were added because the Dictionary API rate limit prevented looking up definitions. Retry later or configure ANTHROPIC_API_KEY.")
     sys.exit(f"No new usable words with hints and meanings found for '{domain}'. words.json was not changed.")
 data[domain] = existing + added
 with open(PATH, "w", encoding="utf-8") as f:
     json.dump(data, f, indent=2)
 print(f"Added {len(added)} words to '{domain}':", ", ".join(item["word"] for item in added))
+if dictionary_rate_limited:
+    print("Some requested words were not processed because the Dictionary API was rate-limited; retry later for more.")

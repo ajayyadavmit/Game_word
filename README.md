@@ -209,7 +209,7 @@ How scores flow: browser → pre-filled issue titled `SCORE|nick|score` → `sco
 - **count**: how many to add (max 100)
 
 - Words are converted to capitals, checked for letters only, de-duplicated, length-filtered by `wordLength`, given a hint and meaning, and committed to `words.json`.
-- **No key set:** Datamuse suggests topic words, then the Free Dictionary API supplies its first available definition for both the hint and meaning. The saved source is `Free Dictionary API (dictionaryapi.dev)`. The dictionary definition is not guaranteed to match the topic-specific sense.
+- **No key set:** Datamuse suggests topic words, then the Free Dictionary API supplies its first available definition for both the hint and meaning. Requests are paced and HTTP 429 rate limits are retried; if the API continues limiting requests, the script stops cleanly and reports that it added only the words processed so far. Retry the workflow later to continue. The saved source is `Free Dictionary API (dictionaryapi.dev)`. The dictionary definition is not guaranteed to match the topic-specific sense.
 - **With `ANTHROPIC_API_KEY`** (repo *Settings → Secrets and variables → Actions*): Claude provides a short clue and topic-aware meaning for each school-appropriate word; the workflow preserves Claude's meaning rather than replacing it with a dictionary definition. Those entries are labeled `AI-generated (Claude)`. Change the model with the `MODEL` line in `update-words.yml` (default `claude-sonnet-5-5`).
 - Datamuse suggestions are not guaranteed to match the topic, so review new words and their clues/definitions. If no suitable words with metadata are found, the workflow fails without changing `words.json`.
 - Always skim new words before students use them.
