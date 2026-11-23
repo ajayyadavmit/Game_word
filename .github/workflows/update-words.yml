@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       domain:
-        description: "Domain name, e.g. science, language, history, mathematics, philosophy, psychology, sociology, economics, literature, engineering, medicine, law, education, arts, geography"
+        description: "Topic key in words.json, e.g. science or Nepal history (spaces become underscores)"
         required: true
         default: education
       query:
@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: python scripts/update_words.py 2>&1 | tee run.log
+      - run: python scripts/update_words.py 2>&1 | tee "$RUNNER_TEMP/run.log"
         shell: bash
         env:
           DOMAIN: ${{ inputs.domain }}
@@ -38,12 +38,12 @@ jobs:
             git config user.email "words-bot@users.noreply.github.com"
             git add words.json
             git diff --cached --quiet || (git commit -m "Update words" && git pull --rebase && git push)
-          } 2>&1 | tee -a run.log
+          } 2>&1 | tee -a "$RUNNER_TEMP/run.log"
         shell: bash
       - name: Upload run log
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: update-words-run-log-${{ github.run_id }}
-          path: run.log
+          path: ${{ runner.temp }}/run.log
           if-no-files-found: ignore

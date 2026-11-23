@@ -6,11 +6,11 @@ from common import CFG
 
 PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "words.json")
 LO, HI = CFG["wordLength"]["min"], CFG["wordLength"]["max"]
-domain = os.environ.get("DOMAIN", "").strip().lower()
+domain = re.sub(r"\s+", "_", os.environ.get("DOMAIN", "").strip().lower())
 query = os.environ.get("QUERY", "").strip()
 count = max(1, min(int(os.environ.get("COUNT") or 20), 100))
 if not re.fullmatch(r"[a-z0-9_-]{2,20}", domain) or not query:
-    sys.exit("DOMAIN must be 2-20 letters/digits and QUERY must not be empty")
+    sys.exit("DOMAIN must be 2-20 letters/digits, underscores, or hyphens; QUERY must not be empty")
 
 
 def from_claude(key):
@@ -34,6 +34,7 @@ def from_datamuse():
 
 
 key = os.environ.get("ANTHROPIC_API_KEY")
+print("Using Claude word generation." if key else "ANTHROPIC_API_KEY is not set; using Datamuse.")
 found = from_claude(key) if key else from_datamuse()
 
 with open(PATH, encoding="utf-8") as f:

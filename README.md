@@ -44,8 +44,8 @@ and **B. Technical setup** (how an engineer installs, configures, tests and depl
 - Tabs switch between Simple, Medium and Hard boards.
 - Your own nickname is highlighted.
 - **Local test mode:** the score is saved automatically when the game ends.
-- **GitHub (online) mode:** the player presses *Send score to leaderboard*, which opens a pre-filled GitHub issue. They press *Submit new issue*, a bot checks the score and adds it, and the board updates about a minute later. Accepted issues are closed; rejected scores get a comment explaining why and stay open. Players need a free GitHub account.
-- Nicknames are guest names only. No personal data is collected or stored: nickname, best score, number of plays, last topic, date.
+- **GitHub (online) mode:** the player presses *Send score to leaderboard*, which opens a pre-filled GitHub issue. They press *Submit new issue*, a bot checks the score and adds it, and the board updates after the workflow runs. Accepted issues are closed; rejected scores get a comment and a `score-rejected` label. Players need a free GitHub account.
+- Nicknames are guest names only; the game does not collect real names. The public leaderboard stores nickname, best score, number of plays, last topic, date, and processed GitHub issue numbers to prevent duplicate score submissions.
 
 ## A5. What a teacher or content owner can do
 | Task | How |
@@ -196,22 +196,22 @@ Stop the server (Ctrl+C) when you finish. `--lan` lets everyone on that network 
 6. Play one game and send the score. In the *Actions* tab, "Add score to leaderboard" should run and the issue should close.
 7. Before launch, clear test scores: `python scripts/admin.py reset`, commit and push.
 
-How scores flow: browser → pre-filled issue titled `SCORE|nick|score` → `score.yml` → `process_score.py` validates → `leaderboard.json` committed → accepted issue closed with a comment → Pages republishes. Rejected scores receive a comment and stay open. Jobs share one concurrency group, so simultaneous scores are queued, not lost. If a new score does not show, check the *Actions* tab and its run-log artifact for the failure or rejection reason.
+How scores flow: browser → pre-filled issue titled `SCORE|nick|score` → `score.yml` scans and validates all open score issues → accepted scores are committed together to `leaderboard.json` → accepted issues are closed → Pages republishes. Each issue number is recorded to prevent duplicate scoring if a workflow retries. Rejected scores receive a comment and `score-rejected` label. The workflow also scans for unprocessed scores every five minutes, recovering score issues if GitHub replaces a pending workflow run. If a score does not show, check the *Actions* tab and its run-log artifact.
 
 ## B8. Update words with GitHub Actions
 *Actions → Update words → Run workflow*, then fill in:
-- **domain**: topic key in `words.json` (new names create new topics), e.g. `science`
+- **domain**: topic key in `words.json` (new names create new topics), e.g. `science` or `Nepal history` (spaces become underscores, so it is saved as `nepal_history`)
 - **query**: what to find words about, e.g. `chemistry` or `grade 6 water cycle`
 - **count**: how many to add (max 100)
 
 Words are converted to capitals, checked for letters only, de-duplicated, length-filtered by `wordLength`, and committed to `words.json`.
-- **No key set:** the free Datamuse API is used (quick, but results are loose matches, so review them).
+- **No key set:** the free Datamuse API is used (quick, but results are loose matches, so review them). The run log prints which provider was selected.
 - **With `ANTHROPIC_API_KEY`** (repo *Settings → Secrets and variables → Actions*): Claude writes school-appropriate words. Change the model with the `MODEL` line in `update-words.yml` (default `claude-sonnet-5-5`).
 - Always skim new words before students use them.
 
 ## B8a. Run logs
 - When running `python server.py`, terminal output is also appended to `run.log` in the project folder. Git ignores this file, so it will not be committed.
-- Each **Add score to leaderboard** and **Update words** GitHub Actions run uploads a `run.log` artifact. Open the workflow run in **Actions** and download the artifact from its **Artifacts** section.
+- Each **Add score to leaderboard** and **Update words** GitHub Actions run writes its `run.log` outside the repository checkout and uploads it as an artifact. This keeps the log from interfering with Git commits or pushes. Open the workflow run in **Actions** and download the artifact from its **Artifacts** section.
 - The artifact captures the Python script and related save/close command output. GitHub's setup and checkout messages remain available in the workflow's regular run log.
 
 ## B9. Login: what is included and what is not
@@ -226,7 +226,7 @@ Why not social login: OAuth needs a secret kept on a server and a place to store
 ## B10. Security and data
 - The server and the Action accept only: nickname `A-Za-z0-9` (3-24), a known difficulty, whole numbers, and a score that is arithmetically possible for `rounds`, `pointsRight` and `pointsWrong`. Everything else is rejected.
 - This stops typos and crude tampering. It **cannot** stop someone sending a perfect score from a made-up honest-looking game. Treat the leaderboard as motivation, not assessment.
-- `leaderboard.json` is public in a public repo. Only nicknames and scores are stored.
+- `leaderboard.json` is public in a public repo. It contains leaderboard nicknames/scores and processed public issue numbers used to prevent duplicate submissions.
 - `server.py` serves every file in the folder and has no login. Use it for testing or on a trusted classroom network only, never on the open internet.
 - Leaderboard text is written to the page with `textContent`, so a tampered JSON cannot inject HTML.
 

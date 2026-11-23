@@ -2,6 +2,8 @@ name: Add score to leaderboard
 on:
   issues:
     types: [opened]
+  schedule:
+    - cron: "*/5 * * * *"
 permissions:
   contents: write
   issues: write
@@ -10,45 +12,60 @@ concurrency:
   cancel-in-progress: false
 jobs:
   add:
-    if: startsWith(github.event.issue.title, 'SCORE|')
+    if: github.event_name == 'schedule' || startsWith(github.event.issue.title, 'SCORE|')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - id: p
-        run: python scripts/process_score.py 2>&1 | tee run.log
-        shell: bash
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - name: Collect open issues
         env:
-          ISSUE_BODY: ${{ github.event.issue.body }}
-      - name: Save leaderboard
-        if: steps.p.outputs.accepted == 'true'
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "SCORE in:title" --limit 1000 --json number,title,body,labels > "$RUNNER_TEMP/open-issues.json"
+      - id: process
+        name: Validate pending score issues
+        run: python scripts/process_score_batch.py "$RUNNER_TEMP/open-issues.json" 2>&1 | tee "$RUNNER_TEMP/run.log"
+        shell: bash
+      - name: Comment on rejected scores
+        if: steps.process.outputs.rejected_issues != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REJECTED_ISSUES: ${{ steps.process.outputs.rejected_issues }}
         run: |
-          {
-            git config user.name "leaderboard-bot"
-            git config user.email "leaderboard-bot@users.noreply.github.com"
-            git add leaderboard.json
-            git diff --cached --quiet || (git commit -m "Update leaderboard" && git pull --rebase && git push)
-          } 2>&1 | tee -a run.log
+          set -euo pipefail
+          if ! gh label list --repo "$GITHUB_REPOSITORY" --limit 1000 --json name --jq '.[].name' | grep -Fxq score-rejected; then
+            gh label create score-rejected --repo "$GITHUB_REPOSITORY" --color FF0000 --description "Score submission was rejected"
+          fi
+          while IFS= read -r issue; do
+            [[ -z "$issue" ]] && continue
+            gh issue comment "$issue" --repo "$GITHUB_REPOSITORY" --body "This score was not accepted and was not added to the leaderboard. Check the Actions run log for the validation reason."
+            gh issue edit "$issue" --repo "$GITHUB_REPOSITORY" --add-label score-rejected
+          done <<< "$REJECTED_ISSUES"
         shell: bash
-      - name: Close issue
-        if: steps.p.outputs.accepted == 'true'
+      - name: Save leaderboard
+        if: steps.process.outputs.accepted_issues != ''
         env:
           GH_TOKEN: ${{ github.token }}
-          MSG: ${{ steps.p.outputs.msg }}
-          NUM: ${{ github.event.issue.number }}
-        run: gh issue close "$NUM" --comment "$MSG" 2>&1 | tee -a run.log
-        shell: bash
-      - name: Comment with rejection reason
-        if: steps.p.outputs.accepted == 'false'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          MSG: ${{ steps.p.outputs.msg }}
-          NUM: ${{ github.event.issue.number }}
-        run: gh issue comment "$NUM" --body "$MSG" 2>&1 | tee -a run.log
+          ACCEPTED_ISSUES: ${{ steps.process.outputs.accepted_issues }}
+        run: |
+          set -euo pipefail
+          git config user.name "leaderboard-bot"
+          git config user.email "leaderboard-bot@users.noreply.github.com"
+          git add leaderboard.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Update leaderboard"
+            git pull --rebase origin "${{ github.event.repository.default_branch }}"
+            git push origin "HEAD:${{ github.event.repository.default_branch }}"
+          fi
+          while IFS= read -r issue; do
+            [[ -z "$issue" ]] && continue
+            gh issue close "$issue" --repo "$GITHUB_REPOSITORY" --comment "Score accepted and saved to the leaderboard."
+          done <<< "$ACCEPTED_ISSUES"
         shell: bash
       - name: Upload run log
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: score-run-log-${{ github.run_id }}
-          path: run.log
+          path: ${{ runner.temp }}/run.log
           if-no-files-found: ignore
