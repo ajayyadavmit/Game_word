@@ -148,6 +148,7 @@ function ask() {
   const item = game.items[game.i];
   const q = game.q = makeQuestion(item.w, CFG.difficulties[game.level].blanks); game.locked = false;
   $("round").textContent = `Word ${game.i + 1} of ${game.items.length}`;
+  $("player-nick").textContent = nick;
   $("score").textContent = game.score;
   $("hint").textContent = item.hint ? "Hint: " + item.hint : "";
   drawTiles(q.word, q.shown);
