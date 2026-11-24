@@ -12,7 +12,7 @@ and **B. Technical setup** (how an engineer installs, configures, tests and depl
 
 ## A1. How a player plays
 1. Open the game.
-2. **Choose a nickname** from the 4 names the game suggests (press *Show other names* for more). This is the guest "login". No password, no real name.
+2. **Choose a nickname** from the suggestions or enter one custom name. Custom names must be a single name of 3-24 letters or numbers (no spaces). This is the guest "login". No password, no real name.
 3. **Choose a difficulty** (see A2).
 4. **Choose a topic** (science, history, ...) or *All topics*.
 5. Press **Play**. Each game has 10 words (setting: `rounds`).
@@ -41,6 +41,7 @@ and **B. Technical setup** (how an engineer installs, configures, tests and depl
 
 ## A4. Leaderboard rules
 - One row per nickname **per level**, showing that nickname's **best** score. Top 10 shown (setting: `leaderboard.showTop`).
+- Only the one nickname chosen for the game is sent with its score; a custom name follows the same validation rules as suggested names.
 - Tabs switch between Simple, Medium and Hard boards.
 - Your own nickname is highlighted.
 - **Local test mode:** the score is saved automatically when the game ends.
@@ -97,6 +98,28 @@ word-game/
     └── update-words.yml  "Update words" (run by hand)
 ```
 
+### Architecture
+```mermaid
+flowchart TD
+  Player --> Browser["Browser game (index.html, style.css, game.js)"]
+  Browser --> Static["Static files (local server or GitHub Pages)"]
+  Static --> Config["config.json"]
+  Static --> Words["words.json"]
+  Static --> Leaderboard["leaderboard.json"]
+  Browser --> Dictionary["Free Dictionary API (optional word meanings)"]
+  Browser --> Ping{"Local server responds to /api/ping?"}
+  Ping -->|Yes| Local["server.py"]
+  Local --> Common["scripts/common.py (score validation)"]
+  Common --> Leaderboard
+  Ping -->|No| GitHub["GitHub Pages mode"]
+  Browser -->|Online score submission| Issue["Pre-filled score issue"]
+  Issue --> Action["score.yml / process_score_batch.py"]
+  Action --> Common
+  Leaderboard -->|Committed and published| Static
+```
+
+In both modes, the browser sends only the selected nickname, score, round count, difficulty and topic. Local mode saves through `server.py`; online mode sends the same score payload through a GitHub issue and Action.
+
 ## B3. Settings you can change (`config.json`)
 JSON has no comments, so every setting is explained here. Bad values stop the Python scripts with a clear message; the browser reports a missing file.
 
@@ -114,7 +137,7 @@ JSON has no comments, so every setting is explained here. Bad values stop the Py
 | `defaultDifficulty` | `"simple"` | Must be a key in `difficulties` |
 | `leaderboard.showTop` | `10` | Rows shown per level |
 | `leaderboard.storeLimitPerLevel` | `100` | Rows kept per level in `leaderboard.json` |
-| `nicknames.suggestionsShown` | `4` | How many names are offered |
+| `nicknames.suggestionsShown` | `4` | How many generated names are offered; players can also enter one custom name (3-24 letters or numbers, no spaces) |
 | `nicknames.adjectives / animals` | 10 each | Name parts. Letters only, 2-10 characters, no spaces. A nickname = adjective + animal + 2 digits |
 | `github.owner / repo` | `""` | GitHub mode only. Leave empty on `name.github.io/repo`; fill in if you use a custom domain |
 
@@ -222,7 +245,7 @@ How scores flow: browser → pre-filled issue titled `SCORE|nick|score` → `sco
 ## B9. Login: what is included and what is not
 | Option | Status | Notes |
 |---|---|---|
-| **Guest nickname** | Included | Program-suggested names, remembered in the browser (`localStorage`). Works in both modes |
+| **Guest nickname** | Included | Program-suggested or custom single names, remembered in the browser (`localStorage`). Custom names must be 3-24 letters or numbers with no spaces. Works in both modes |
 | **GitHub account identity** | Included in GitHub mode | The player must be signed in to GitHub to submit the issue. The game does not read or store the GitHub name |
 | **Google / Facebook / GitHub sign-in inside the game** | **Not included** | See below |
 
@@ -256,7 +279,7 @@ The two GitHub workflow files were checked for valid YAML but were **not run on 
 
 ## Common questions
 ### how the nickname is generated?
-Nicknames are generated entirely in the browser.
+Suggested nicknames are generated entirely in the browser. Players may also enter their own single name, using 3-24 letters or numbers with no spaces.
 
 The code randomly combines:
 One adjective from config.json

@@ -1,5 +1,5 @@
 @import url("https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap");
-:root{--ink:#1b2559;--paper:#f2f5ff;--card:#fff;--sun:#ffbf1f;--good:#1b8f5f;--bad:#cc3b3b;--soft:#dfe5fb;--mid:#5560a0}
+:root{--ink:#1b2559;--paper:#f2f5ff;--card:#fff;--sun:#ffbf1f;--good:#1b8f5f;--bad:#cc3b3b;--soft:#5d8719;--mid:#5560a0}
 *{box-sizing:border-box}
 body{margin:0;background:var(--paper);color:var(--ink);font:400 1.1rem/1.5 Fredoka,ui-rounded,system-ui,sans-serif}
 main{max-width:960px;margin:0 auto;padding:1.5rem;display:grid;gap:1.5rem;grid-template-columns:1fr}
@@ -7,13 +7,17 @@ main{max-width:960px;margin:0 auto;padding:1.5rem;display:grid;gap:1.5rem;grid-t
 h1{grid-column:1/-1;margin:0;font-size:2.4rem;font-weight:700}
 h2{font-size:1.15rem;margin:1.2rem 0 .5rem}
 #stage,aside{background:var(--card);border-radius:1rem;padding:1.2rem 1.4rem}
-button,select{font:inherit;color:inherit;border-radius:.7rem;border:2px solid var(--ink);background:var(--card);padding:.55rem 1rem;cursor:pointer}
-button:focus-visible,select:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+button,select,input{font:inherit;color:inherit;border-radius:.7rem;border:2px solid var(--ink);background:var(--card);padding:.55rem 1rem}
+button,select{cursor:pointer}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
 button:disabled{cursor:default}
 .primary{background:var(--ink);color:#fff;margin-top:1rem}
 .primary:disabled{opacity:.4}
 .ghost{border-color:var(--soft);color:var(--mid)}
 .chips{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:.5rem}
+.nickname-entry{display:flex;flex-wrap:wrap;gap:.5rem}
+.nickname-entry input{min-width:0;flex:1}
+.nickname-entry button{white-space:nowrap}
 .chip.on{background:var(--sun);border-color:var(--ink);font-weight:600}
 .bar{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:.5rem}
 #round{grid-column:1;min-width:0}

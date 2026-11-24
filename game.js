@@ -10,7 +10,7 @@ let CFG, mode = "github", bank = {}, allWords = new Set(), nick = "", level = ""
 const meaningCache = new Map();
 try { nick = localStorage.getItem("wg_nick") || ""; } catch (e) {}
 
-// ---------- guest nickname (suggested by the program, no free typing) ----------
+// ---------- guest nickname ----------
 function suggestNames() {
   const { adjectives: A, animals: N, suggestionsShown: k } = CFG.nicknames, s = new Set();
   for (let g = 0; s.size < k && g < 200; g++) s.add(A[rnd(A.length)] + N[rnd(N.length)] + (10 + rnd(90)));
@@ -27,6 +27,22 @@ function renderNicks() {
     b.onclick = () => { nick = n; try { localStorage.setItem("wg_nick", n); } catch (e) {} markNick(); };
     box.appendChild(b);
   });
+  markNick();
+}
+
+function useCustomNick(event) {
+  event.preventDefault();
+  const input = $("custom-nick");
+  const name = input.value.trim();
+  const error = $("custom-nick-error");
+  if (!/^[A-Za-z0-9]{3,24}$/.test(name)) {
+    error.textContent = "Use one name with 3-24 letters or numbers and no spaces.";
+    input.focus();
+    return;
+  }
+  nick = name;
+  error.textContent = "";
+  try { localStorage.setItem("wg_nick", nick); } catch (e) {}
   markNick();
 }
 
@@ -280,6 +296,7 @@ function renderBoard() {
 // ---------- start-up ----------
 async function init() {
   $("play").onclick = start;
+  $("custom-nick-form").onsubmit = useCustomNick;
   $("pronounce").onclick = () => {
     if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) return;
     const utterance = new SpeechSynthesisUtterance($("vocab-word").textContent);
